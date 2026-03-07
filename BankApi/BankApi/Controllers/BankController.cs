@@ -64,7 +64,7 @@ public class BankController : ControllerBase
             return BadRequest("Konto już istnieje");
         if (!_bank.DodajKonto(konto.NumerKonta, konto.Wlasciciel, konto.Haslo)) 
             return BadRequest("Zly numer konta");
-        return Ok(konto);
+        return Ok("Pomdyslnie dodano konto");
     }
     [HttpPut("deposit")]
     public IActionResult Wplata(decimal kwota)
