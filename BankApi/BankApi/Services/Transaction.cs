@@ -6,10 +6,13 @@ namespace BankApi.Services
     {
         public class Transaction
         {
+            public int Id { get; set; }
             public decimal Kwota { get; set; }
             public DateTime DataTransakcji { get; set;}
             public string NumerKontaNadawcy { get; set; }
             public string NumerKontaOdbiorcy { get; set; }
+            public string Typ { get; set; }
+            public Transaction() { }
             public Transaction(decimal kwota, DateTime dataTransakcji, string numerKontaNadawcy , string numerKontaOdbiorcy)
             {
                 Kwota = kwota;

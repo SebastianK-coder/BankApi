@@ -1,147 +1,120 @@
-﻿using System;
+﻿using BankApi.Data;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Microsoft.EntityFrameworkCore;
 
 namespace BankApi.Services
 {
     public partial class Program
     {
+
         const int PoczatkoweSaldo = 0;
         public class BankServices : IBankService
         {
-            private List<KontoBankowe> KontaBankowe = new List<KontoBankowe>();
-            public BankServices()
+            private readonly BankingDbContext _context;
+            public BankServices(BankingDbContext context)
             {
-                WczytajWszystkieKonta();
+                _context = context;
             }
-            public KontoBankowe ZnajdzKonto(string numerKonta)
+            public async Task<KontoBankowe> ZnajdzKonto(string numerKonta)
             {
-                return KontaBankowe.FirstOrDefault(k => k.NumerKonta == numerKonta);
+                return await _context.Accounts.FirstOrDefaultAsync(k => k.NumerKonta == numerKonta);
             }
-            public int ZwrocIloscKont()
+            public async Task<int> ZwrocIloscKont()
             {
-                return KontaBankowe.Count();
+                return _context.Accounts.Count();
             }
-            bool IBankService.CzyIstniejeKonto(string numer)
+            async Task<bool> IBankService.CzyIstniejeKonto(string numer)
             {
-                foreach (KontoBankowe k in KontaBankowe)
+                if(_context.Accounts.FirstOrDefault(k => k.NumerKonta == numer) == null)
+                    return false;
+                return true;
+            }
+
+            async Task<bool> IBankService.Wplac(string numerKonta, decimal kwota)
+            {
+                var szukane = await ZnajdzKonto(numerKonta);
+
+                if (szukane == null)
+                    return false;
+
+                szukane.ZmienSaldo(kwota);
+
+                var transakcja = new Transaction
                 {
-                    if (k.NumerKonta == numer)
-                    {
-                        Console.WriteLine("Istnieje juz konto o takim numerze");
-                        return true;
-                    }
-                }
-                return false;
-            }
-            public void ZapiszKontoDoPliku(KontoBankowe konto)
-            {
-                try
-                {
-                    string folder = "Files";
+                    NumerKontaNadawcy = "BRAK",
+                    NumerKontaOdbiorcy = numerKonta,
+                    Kwota = kwota,
+                    DataTransakcji = DateTime.Now,
+                    Typ = "Wplata"
+                };
 
-                    if (!Directory.Exists(folder))
-                        Directory.CreateDirectory(folder);
+                _context.Transactions.Add(transakcja);
 
-                    string sciezka = Path.Combine(folder, $"{konto.NumerKonta}.json");
+                await _context.SaveChangesAsync();
 
-                    var options = new JsonSerializerOptions
-                    {
-                        WriteIndented = true
-                    };
-
-                    string json = JsonSerializer.Serialize(konto, options);
-                    File.WriteAllText(sciezka, json);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("Błąd zapisu konta:");
-                    Console.WriteLine(ex.Message);
-                }
-            }
-            public void WczytajWszystkieKonta()
-            {
-                try
-                {
-                    string sciezka = "Files";
-
-                    if (!Directory.Exists(sciezka))
-                        return;
-
-                    string[] pliki = Directory.GetFiles(sciezka, "*.json");
-
-                    foreach (var plik in pliki)
-                    {
-                        string json = File.ReadAllText(plik);
-
-                        var konto = JsonSerializer.Deserialize<KontoBankowe>(json);
-
-                        if (konto != null) KontaBankowe.Add(konto);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("Błąd podczas wczytywania kont:");
-                    Console.WriteLine(ex.Message);
-                }
+                return true;
             }
 
-            bool IBankService.Wplac(string numerKonta, decimal kwota)
+            async Task<bool> IBankService.Wyplac(string numerKonta, decimal kwota)
             {
-                KontoBankowe szukane = ZnajdzKonto(numerKonta);
-                if (szukane != null)
+                var konto = await ZnajdzKonto(numerKonta);
+
+                if (konto == null)
+                    return false;
+
+                konto.ZmienSaldo(-kwota);
+
+                var transakcja = new Transaction
                 {
-                    szukane.ZmienSaldo(kwota);
-                    szukane.transakcje.Add(new Transaction(kwota, DateTime.Now, "Brak nadawcy. Wplata srodkow", numerKonta));
-                    ZapiszKontoDoPliku(szukane);
-                    return true;
-                }
-                return false;
+                    NumerKontaNadawcy = numerKonta,
+                    NumerKontaOdbiorcy = "BRAK",
+                    Kwota = kwota,
+                    DataTransakcji = DateTime.Now,
+                    Typ = "Wyplata"
+                };
+
+                _context.Transactions.Add(transakcja);
+
+                await _context.SaveChangesAsync();
+
+                return true;
             }
 
-            bool IBankService.Wyplac(string numerKonta, decimal kwota)
+            async Task<bool> IBankService.Przelew(string numerNadawcy, string numerOdbiorcy, decimal kwota)
             {
-                KontoBankowe szukane = ZnajdzKonto(numerKonta);
-                if (szukane != null)
-                {
-                    if (szukane.Saldo >= kwota)
-                    {
-                        szukane.ZmienSaldo(-kwota);
-                        szukane.transakcje.Add(new Transaction(kwota, DateTime.Now, numerKonta, "Brak odbiorcy. Wyplata srodkow"));
-                        ZapiszKontoDoPliku(szukane);
-                        return true;
+                var kontoNadawcy = await ZnajdzKonto(numerNadawcy);
+                var kontoOdbiorcy = await ZnajdzKonto(numerOdbiorcy);
 
-                    }
-                }
-                return false;
+                if (kontoNadawcy == null || kontoOdbiorcy == null)
+                    return false;
+
+                kontoNadawcy.ZmienSaldo(-kwota);
+                kontoOdbiorcy.ZmienSaldo(kwota);
+
+                var transakcja = new Transaction
+                {
+                    NumerKontaNadawcy = numerNadawcy,
+                    NumerKontaOdbiorcy = numerOdbiorcy,
+                    Kwota = kwota,
+                    DataTransakcji = DateTime.Now,
+                    Typ = "Przelew"
+                };
+
+                _context.Transactions.Add(transakcja);
+
+                await _context.SaveChangesAsync();
+
+                return true;
             }
 
-            bool IBankService.Przelew(string numerNadawcy, string numerOdbiorcy, decimal kwota)
+            async Task<KontoBankowe> IBankService.PobierzKonto(string numerKonta)
             {
-                KontoBankowe szukane1 = ZnajdzKonto(numerNadawcy);
-                KontoBankowe szukane2 = ZnajdzKonto(numerOdbiorcy);
-                if (szukane1 != null && szukane2 != null)
-                {
-                    if (szukane1.Saldo >= kwota)
-                    {
-                        szukane1.ZmienSaldo(-kwota);
-                        szukane1.transakcje.Add(new Transaction(kwota, DateTime.Now, numerNadawcy, numerOdbiorcy));
-                        ZapiszKontoDoPliku(szukane1);
-                        szukane2.ZmienSaldo(kwota);
-                        szukane2.transakcje.Add(new Transaction(kwota, DateTime.Now, numerNadawcy, numerOdbiorcy));
-                        ZapiszKontoDoPliku(szukane2);
-                        return true;
-                    }
-                }
-                return false;
-            }
-
-            KontoBankowe IBankService.PobierzKonto(string numerKonta)
-            {
-                KontoBankowe szukane = KontaBankowe.FirstOrDefault(k => k.NumerKonta == numerKonta);
+                KontoBankowe szukane = _context.Accounts.FirstOrDefault(k => k.NumerKonta == numerKonta);
                 if(szukane != null)
                 {
                     return szukane;
@@ -149,32 +122,36 @@ namespace BankApi.Services
                 return null;
             }
 
-            bool IBankService.DodajKonto(string numerKonta, string wlasciciel, string haslo)
+            async Task<bool> IBankService.DodajKonto(string numerKonta, string wlasciciel, string haslo)
             {
-                if(CzyPoprawnyNumerKonta(numerKonta))
+                if (await CzyPoprawnyNumerKonta(numerKonta))
                 {
-                    KontaBankowe.Add(new KontoBankowe(numerKonta, wlasciciel, PoczatkoweSaldo, haslo));
-                    ZapiszKontoDoPliku(KontaBankowe.Last());
+                    var konto = new KontoBankowe(numerKonta, wlasciciel, PoczatkoweSaldo, haslo);
+
+                    _context.Accounts.Add(konto);
+
+                    await _context.SaveChangesAsync();
+
                     return true;
                 }
                 return false;
+
                 
             }
-            void IBankService.PokazHistorieKonta(string numerKonta)
+            async Task IBankService.PokazHistorieKonta(string numerKonta)
             {
-                KontoBankowe szukane = ZnajdzKonto(numerKonta);
-                szukane.PokazSaldo();
+                KontoBankowe szukane = await ZnajdzKonto(numerKonta);
+                szukane.PokazInfo();
             }
-            bool IBankService.Zaloguj(string numerKonta, string haslo)
+            async Task<bool> IBankService.Zaloguj(string numerKonta, string haslo)
             {
-                KontoBankowe szukane = KontaBankowe.FirstOrDefault(k => k.NumerKonta == numerKonta);
+                var szukane = await _context.Accounts
+                .FirstOrDefaultAsync(k => k.NumerKonta == numerKonta);
                 if (szukane != null)
-                { 
-                    if (szukane.Haslo == haslo) return true;
-                }
+                    return true;
                 return false;
             }
-            bool CzyPoprawnyNumerKonta(string numerKonta)
+            async Task<bool> CzyPoprawnyNumerKonta(string numerKonta)
             {
                 if (numerKonta.Length == 26 && Regex.IsMatch(numerKonta.Replace(" ", ""), @"^\d{26}$")) return true;
                 else return false;

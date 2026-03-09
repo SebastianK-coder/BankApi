@@ -1,11 +1,14 @@
+using BankApi.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using static BankApi.Services.Program;
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddSingleton<IBankService, BankServices>();
+builder.Services.AddDbContext<BankingDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<IBankService, BankServices>();
 
 // Add services to the container.

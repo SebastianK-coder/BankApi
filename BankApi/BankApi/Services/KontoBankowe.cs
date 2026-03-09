@@ -11,7 +11,8 @@ namespace BankApi.Services
             public string Wlasciciel { get; set; }
             public decimal Saldo { get; set; }
             public string Haslo { get; set; }
-            public List<Transaction> transakcje { get; set; } = new List<Transaction>();
+            public List<Transaction> Transakcje { get; set; } = new List<Transaction>();
+            private KontoBankowe() { }
 
             public KontoBankowe(string numerkonta, string wlasciciel ,decimal saldo, string haslo)
             {
@@ -24,11 +25,11 @@ namespace BankApi.Services
             {
                 Saldo += kwota;
             }
-            public void PokazSaldo()
+            public void PokazInfo()
             {
                 Console.WriteLine($"Saldo wynosi {Saldo} zl");
                 Console.WriteLine();
-                foreach(Transaction t in transakcje)
+                foreach(Transaction t in Transakcje)
                 {
                     t.GetDetails();
                     Console.WriteLine();

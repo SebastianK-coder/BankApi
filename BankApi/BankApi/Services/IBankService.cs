@@ -10,15 +10,15 @@ namespace BankApi.Services
     {
         public interface IBankService
         {
-            bool DodajKonto(string numerKonta, string wlasciciel, string haslo);
-            bool Wplac(string numerKonta, decimal kwota);
-            bool Wyplac(string numerKonta, decimal kwota);
-            bool Przelew(string numerNadawcy, string numerOdbiorcy, decimal kwota);
-            bool Zaloguj(string numerKonta, string haslo);
-            KontoBankowe PobierzKonto(string numerKonta);
-            int ZwrocIloscKont();
-            void PokazHistorieKonta(string numerKonta);
-            bool CzyIstniejeKonto(string numer);
+            Task<bool> DodajKonto(string numerKonta, string wlasciciel, string haslo);
+            Task<bool> Wplac(string numerKonta, decimal kwota);
+            Task<bool> Wyplac(string numerKonta, decimal kwota);
+            Task<bool> Przelew(string numerNadawcy, string numerOdbiorcy, decimal kwota);
+            Task<bool> Zaloguj(string numerKonta, string haslo);
+            Task<KontoBankowe> PobierzKonto(string numerKonta);
+            Task<int> ZwrocIloscKont();
+            Task PokazHistorieKonta(string numerKonta);
+            Task<bool> CzyIstniejeKonto(string numer);
 
         }
     }
