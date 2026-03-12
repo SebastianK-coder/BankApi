@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
 namespace BankApi.Data
@@ -8,7 +9,6 @@ namespace BankApi.Data
         public BankingDbContext CreateDbContext(string[] args)
         {
             var optionsBuilder = new DbContextOptionsBuilder<BankingDbContext>();
-            optionsBuilder.UseSqlite("Data Source=banking.db"); // <- Twój connection string
 
             return new BankingDbContext(optionsBuilder.Options);
         }

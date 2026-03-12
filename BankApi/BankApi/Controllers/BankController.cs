@@ -1,13 +1,14 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using BankApi.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using SQLitePCL;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using static BankApi.Services.Program;
 using static BankApi.Data.BankingDbContext;
-using BankApi.Data;
-using SQLitePCL;
+using static BankApi.Services.Program;
 [Authorize]
 [ApiController]
 [Route("api/[controller]")]
@@ -15,9 +16,11 @@ using SQLitePCL;
 public class BankController : ControllerBase
 {
     private IBankService _bank;
-    public BankController(IBankService bank)
+    private BankingDbContext _context;
+    public BankController(IBankService bank, BankingDbContext context)
     {
         _bank = bank;
+        _context = context;
     }
 
     [AllowAnonymous]
@@ -99,5 +102,34 @@ public class BankController : ControllerBase
             return Ok("Pomyslnie wykonano przelew");
         else 
             return BadRequest("Blad przy wprowadzaniu danych");
+    }
+    [AllowAnonymous]
+    [HttpGet("diag")]
+    public IActionResult Diag()
+    {
+        try
+        {
+            var result = new
+            {
+                ContextOk = _context != null,
+                CanConnect = _context.Database.CanConnect(),
+                DbName = _context.Database.GetDbConnection().Database,
+                Tables = _context.Database
+                    .SqlQueryRaw<string>("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE'")
+                    .ToList()
+            };
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest($"Błąd: {ex.Message}");
+        }
+    }
+    [AllowAnonymous]
+    [HttpGet("conn")]
+    public IActionResult TestConn()
+    {
+        var conn = _context.Database.GetDbConnection().ConnectionString;
+        return Ok($"Connection: {conn}");
     }
 }

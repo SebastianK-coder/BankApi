@@ -7,8 +7,11 @@ using System.Security.Claims;
 using System.Text;
 using static BankApi.Services.Program;
 var builder = WebApplication.CreateBuilder(args);
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<BankingDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(connectionString));
+
+builder.Services.AddControllers();
 builder.Services.AddScoped<IBankService, BankServices>();
 
 // Add services to the container.

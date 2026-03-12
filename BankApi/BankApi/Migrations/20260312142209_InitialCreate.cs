@@ -15,10 +15,10 @@ namespace BankApi.Migrations
                 name: "Accounts",
                 columns: table => new
                 {
-                    NumerKonta = table.Column<string>(type: "TEXT", nullable: false),
-                    Wlasciciel = table.Column<string>(type: "TEXT", nullable: false),
-                    Saldo = table.Column<decimal>(type: "TEXT", nullable: false),
-                    Haslo = table.Column<string>(type: "TEXT", nullable: false)
+                    NumerKonta = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Wlasciciel = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Saldo = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    Haslo = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -29,15 +29,18 @@ namespace BankApi.Migrations
                 name: "Transactions",
                 columns: table => new
                 {
-                    DataTransakcji = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    Kwota = table.Column<decimal>(type: "TEXT", nullable: false),
-                    NumerKontaNadawcy = table.Column<string>(type: "TEXT", nullable: false),
-                    NumerKontaOdbiorcy = table.Column<string>(type: "TEXT", nullable: false),
-                    KontoBankoweNumerKonta = table.Column<string>(type: "TEXT", nullable: true)
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Kwota = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    DataTransakcji = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    NumerKontaNadawcy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    NumerKontaOdbiorcy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Typ = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    KontoBankoweNumerKonta = table.Column<string>(type: "nvarchar(450)", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Transactions", x => x.DataTransakcji);
+                    table.PrimaryKey("PK_Transactions", x => x.Id);
                     table.ForeignKey(
                         name: "FK_Transactions_Accounts_KontoBankoweNumerKonta",
                         column: x => x.KontoBankoweNumerKonta,

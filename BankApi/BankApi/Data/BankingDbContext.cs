@@ -18,6 +18,22 @@ namespace BankApi.Data
         {
             modelBuilder.Entity<KontoBankowe>()
                 .HasKey(k => k.NumerKonta);
+            modelBuilder.Entity<KontoBankowe>()
+                .Property(k => k.Saldo)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<Transaction>()
+                .Property(t => t.Kwota)
+                .HasPrecision(18, 2);
+        }
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            var builder = WebApplication.CreateBuilder();
+            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+            if (!optionsBuilder.IsConfigured)
+            {
+                optionsBuilder.UseSqlServer(connectionString);
+            }
         }
     }
 }
