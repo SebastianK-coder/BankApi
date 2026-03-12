@@ -25,6 +25,9 @@ namespace BankApi.Data
             modelBuilder.Entity<Transaction>()
                 .Property(t => t.Kwota)
                 .HasPrecision(18, 2);
+            modelBuilder.Entity<KontoBankowe>()
+            .HasIndex(k => k.NumerKonta)
+            .IsUnique();
         }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {

@@ -23,6 +23,8 @@ namespace BankApi.Services
             }
             public void ZmienSaldo(decimal kwota)
             {
+                if(Saldo + kwota < 0)
+                    throw new InvalidOperationException("Brak wystarczajacych srodkow na koncie"); 
                 Saldo += kwota;
             }
             public void PokazInfo()

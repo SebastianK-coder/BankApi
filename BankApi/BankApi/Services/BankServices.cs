@@ -85,32 +85,45 @@ namespace BankApi.Services
                 return true;
             }
 
-            async Task<bool> IBankService.Przelew(string numerNadawcy, string numerOdbiorcy, decimal kwota)
-            {
-                var kontoNadawcy = await ZnajdzKonto(numerNadawcy);
-                var kontoOdbiorcy = await ZnajdzKonto(numerOdbiorcy);
 
-                if (kontoNadawcy == null || kontoOdbiorcy == null)
-                    return false;
-
-                kontoNadawcy.ZmienSaldo(-kwota);
-                kontoOdbiorcy.ZmienSaldo(kwota);
-
-                var transakcja = new Transaction
+                public async Task<bool> Przelew(string numerNadawcy, string numerOdbiorcy, decimal kwota)
                 {
-                    NumerKontaNadawcy = numerNadawcy,
-                    NumerKontaOdbiorcy = numerOdbiorcy,
-                    Kwota = kwota,
-                    DataTransakcji = DateTime.Now,
-                    Typ = "Przelew"
-                };
+                    using var transaction = await _context.Database.BeginTransactionAsync();
 
-                _context.Transactions.Add(transakcja);
+                    try
+                    {
+                        var kontoNadawcy = await ZnajdzKonto(numerNadawcy);
+                        var kontoOdbiorcy = await ZnajdzKonto(numerOdbiorcy);
 
-                await _context.SaveChangesAsync();
+                        if (kontoNadawcy == null || kontoOdbiorcy == null)
+                            return false;
 
-                return true;
-            }
+                        kontoNadawcy.ZmienSaldo(-kwota);
+                        kontoOdbiorcy.ZmienSaldo(kwota);
+
+                        var transakcja = new Transaction
+                        {
+                            NumerKontaNadawcy = numerNadawcy,
+                            NumerKontaOdbiorcy = numerOdbiorcy,
+                            Kwota = kwota,
+                            DataTransakcji = DateTime.Now,
+                            Typ = "Przelew"
+                        };
+
+                        _context.Transactions.Add(transakcja);
+
+                        await _context.SaveChangesAsync();
+
+                        await transaction.CommitAsync();
+
+                        return true;
+                    }
+                    catch
+                    {
+                        await transaction.RollbackAsync();
+                        return false;
+                    }
+                }
 
             async Task<KontoBankowe> IBankService.PobierzKonto(string numerKonta)
             {
@@ -147,7 +160,7 @@ namespace BankApi.Services
             {
                 var szukane = await _context.Accounts
                 .FirstOrDefaultAsync(k => k.NumerKonta == numerKonta);
-                if (szukane != null)
+                if (szukane != null && szukane.Haslo == haslo)
                     return true;
                 return false;
             }
